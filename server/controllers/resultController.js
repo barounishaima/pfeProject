@@ -1,74 +1,58 @@
 const service = require('../services/resultService');
 
-const { processScanResults } = require('../utils/scanResultProcessor');
-
+// Get all results for a given task (scan)
 exports.getResultsForTask = async (req, res) => {
   try {
-    const response = await service.getResultsForTask(req.params.taskId);
-    
-    if (!response.data) {
+    const results = await service.getResultsForTask(req.params.taskId);
+
+    if (!results || results.length === 0) {
       return res.status(404).json({ error: 'No results found for this task' });
     }
 
-    // Process the raw results into a more usable format
-    const processedResults = processScanResults(response.data);
-
-    // Add pagination info if available
-    const resultWithMeta = {
-      data: processedResults,
+    res.json({
+      data: results,
       meta: {
-        total: response.data.result_count?.filtered || processedResults.length,
-        count: processedResults.length,
-        status: response.data.status,
-        statusText: response.data.status_text
+        total: results.length,
+        count: results.length
       }
-    };
-
-    res.json(resultWithMeta);
+    });
   } catch (err) {
     console.error('Error fetching task results:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch task results',
-      details: err.message 
+      details: err.message
     });
   }
 };
 
-
-const { processResultDetail } = require('../utils/resultDetailProcessor');
-
+// Get detail for a single result by MongoDB _id
 exports.getResultDetail = async (req, res) => {
   try {
-    const response = await service.getResultDetail(req.params.resultId);
-    
-    if (!response.data?.result) {
-      return res.status(404).json({ 
+    const result = await service.getResultDetail(req.params.resultId);
+
+    if (!result) {
+      return res.status(404).json({
         error: 'Result not found',
         details: `No result found with ID ${req.params.resultId}`
       });
     }
 
-    const processedResult = processResultDetail(response.data);
-    
     res.json({
-      data: processedResult,
+      data: result,
       meta: {
-        status: response.data.status,
-        statusText: response.data.status_text,
-        filteredCount: parseInt(response.data.result_count?.filtered) || 1
+        id: req.params.resultId
       }
     });
-    
   } catch (err) {
     console.error(`Error processing result detail ${req.params.resultId}:`, err);
-    
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to process result details',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };
 
+// Proxy getReport to external API (no change needed)
 exports.getReport = async (req, res) => {
   try {
     const { format } = req.query;

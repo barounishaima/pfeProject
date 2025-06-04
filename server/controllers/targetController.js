@@ -1,12 +1,23 @@
-import service from '../services/targetService';
+import * as service from'../services/targetService.js';
+
+// Format a Target document into API-friendly response
+const formatTarget = (target) => ({
+  id: target.TargetId,
+  name: target.Name,
+  comment: target.Comment || '',
+  ipAddresses: target.IpAdresses || [],
+  createdAt: target.createdAt,
+  updatedAt: target.updatedAt,
+});
 
 // Create Target
-exports.create = async (req, res) => {
+export const create = async (req, res) => {
   try {
-    const result = await service.createTarget(req.body);
+    const target = await service.createTarget(req.body);
     res.json({
-      success: result.data.status === '201',
-      id: result.data.id
+      success: true,
+      id: target.TargetId,
+      message: 'Target created successfully',
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -14,62 +25,33 @@ exports.create = async (req, res) => {
 };
 
 // Get All Targets
-exports.getAll = async (_req, res) => {
+export const getAll = async (_req, res) => {
   try {
-    const result = await service.getTargets();
-    const rawTargets = result.data.target || [];
-
-    const targets = rawTargets.map(t => ({
-      id: t.id,
-      name: t.name,
-      owner: t.owner?.name || 'unknown',
-      hosts: t.hosts,
-      port_list_name: t.port_list?.name || '',
-      in_use: t.in_use === '1',
-      creation_time: t.creation_time,
-      modification_time: t.modification_time
-    }));
-
-    res.json(targets);
+    const targets = await service.getTargets();
+    res.json(targets.map(formatTarget));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 // Get One Target
-exports.getOne = async (req, res) => {
+export const getOne = async (req, res) => {
   try {
-    const result = await service.getTarget(req.params.id);
-    const t = result.data.target;
-
-    const target = {
-      id: t.id,
-      name: t.name,
-      owner: t.owner?.name || 'unknown',
-      hosts: t.hosts,
-      port_list_name: t.port_list?.name || '',
-      port_list_id: t.port_list?.id || '',
-      in_use: t.in_use === '1',
-      max_hosts: t.max_hosts,
-      allow_simultaneous_ips: t.allow_simultaneous_ips === '1',
-      alive_tests: t.alive_tests,
-      creation_time: t.creation_time,
-      modification_time: t.modification_time
-    };
-
-    res.json(target);
+    const target = await service.getTarget(req.params.id);
+    res.json(formatTarget(target));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
 // Update Target
-exports.update = async (req, res) => {
+export const update = async (req, res) => {
   try {
-    const result = await service.updateTarget(req.params.id, req.body);
+    const updated = await service.updateTarget(req.params.id, req.body);
     res.json({
       success: true,
-      message: result.data.message
+      message: 'Target updated successfully',
+      updated: formatTarget(updated),
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -77,12 +59,13 @@ exports.update = async (req, res) => {
 };
 
 // Delete Target
-exports.remove = async (req, res) => {
+export const remove = async (req, res) => {
   try {
-    const result = await service.deleteTarget(req.params.id);
+    const deleted = await service.deleteTarget(req.params.id);
     res.json({
       success: true,
-      message: result.data.message
+      message: 'Target deleted successfully',
+      deletedId: deleted.TargetId,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

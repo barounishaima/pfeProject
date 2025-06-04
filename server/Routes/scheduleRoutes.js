@@ -1,11 +1,17 @@
-import express from 'express';
+import express from "express";
 const router = express.Router();
-const controller = require('../controllers/scheduleController');
+import { 
+  create, 
+  getAll, 
+  getOne, 
+  update, 
+  remove 
+} from "../controllers/scheduleController.js";
 
-router.post('/', controller.create);
-router.get('/', controller.getAll);
-router.get('/:id', controller.getOne);
-router.put('/:id', controller.update);
-router.delete('/:id', controller.remove);
+router.post("/", create);
+router.get("/", getAll);
+router.get("/:id", getOne);
+router.put("/:id", update);
+router.delete("/:id", remove);
 
-export default router;
+export { router as scheduleRouter };

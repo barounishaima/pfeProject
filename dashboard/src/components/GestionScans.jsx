@@ -303,7 +303,7 @@ const GestionScans = () => {
         <Button label="Créer" icon="pi pi-check" type="submit" className="w-full" />
 
         {/* Target Dialog */}
-        <Dialog
+<Dialog
   header="Ajouter une nouvelle cible"
   visible={targetDialogVisible}
   onHide={() => setTargetDialogVisible(false)}
@@ -355,39 +355,35 @@ const GestionScans = () => {
             checked={newTarget.hostType === 'network'}
             onChange={handleNewTargetChange}
           />{' '}
-          Réseau
+          Plusieurs machines
         </label>
       </div>
     </div>
 
-    {/* Host IP or FileUpload */}
-    {newTarget.hostType === 'machine' ? (
-      <div className="field">
-        <label>Adresse IP</label>
-        <InputText
-          name="hostIp"
-          value={newTarget.hostIp}
-          onChange={handleNewTargetChange}
-          placeholder="Ex: 192.168.1.1"
-        />
-      </div>
-    ) : (
-      <div className="field">
-        <label>Fichier de réseau</label>
-        <FileUpload
-          name="hostFile"
-          customUpload
-          chooseLabel="Choisir un fichier"
-          mode="basic"
-          onSelect={(e) =>
-            setNewTarget((prev) => ({
-              ...prev,
-              hostFile: e.files[0],
-            }))
-          }
-        />
-      </div>
-    )}
+    {/* Host IP Input - Unified for both single and multiple IPs */}
+    <div className="field">
+      <label>
+        {newTarget.hostType === 'machine' ? 'Adresse IP' : 'Adresses IP'}
+      </label>
+      <InputText
+        name="hostIp"
+        value={newTarget.hostIp}
+        onChange={handleNewTargetChange}
+        placeholder={
+          newTarget.hostType === 'machine' 
+            ? 'Ex: 192.168.1.1' 
+            : 'Ex: 192.168.1.1, 192.168.1.2, 192.168.1.3'
+        }
+        style={{
+          height: newTarget.hostType === 'network' ? '80px' : undefined,
+        }}
+        multiline={newTarget.hostType === 'network'}
+        rows={newTarget.hostType === 'network' ? 3 : 1}
+      />
+      {newTarget.hostType === 'network' && (
+        <small className="p-text-secondary">Séparez les adresses IP par des virgules</small>
+      )}
+    </div>
 
     {/* Exclude Host Type (Radio) */}
     <div className="field">
@@ -416,34 +412,36 @@ const GestionScans = () => {
       </div>
     </div>
 
-    {/* Exclude IP or FileUpload */}
-    {newTarget.excludeHostType === 'une machine' ? (
-      <div className="field">
-        <label>Adresse IP à exclure</label>
+    {/* Exclude IP Input - Unified for both single and multiple IPs */}
+    <div className="field">
+      <label>
+        {newTarget.excludeHostType === 'une machine' 
+          ? 'Adresse IP à exclure' 
+          : 'Adresses IP à exclure'}
+      </label>
+      {newTarget.excludeHostType === 'une machine' ? (
         <InputText
           name="excludeHostIp"
           value={newTarget.excludeHostIp}
           onChange={handleNewTargetChange}
           placeholder="Ex: 192.168.1.5"
+          className="w-full"
         />
-      </div>
-    ) : (
-      <div className="field">
-        <label>Fichier d'exclusion</label>
-        <FileUpload
-          name="excludeHostFile"
-          customUpload
-          chooseLabel="Choisir un fichier"
-          mode="basic"
-          onSelect={(e) =>
-            setNewTarget((prev) => ({
-              ...prev,
-              excludeHostFile: e.files[0],
-            }))
-          }
-        />
-      </div>
-    )}
+      ) : (
+        <div className="flex flex-column gap-1">
+          <textarea
+            name="excludeHostIp"
+            value={newTarget.excludeHostIp}
+            onChange={handleNewTargetChange}
+            placeholder="Ex: 192.168.1.5, 192.168.1.6"
+            className="w-full p-2 border-round"
+            style={{ minHeight: '100px', resize: 'vertical' }}
+            rows={4}
+          />
+          <small className="p-text-secondary">Séparez les adresses IP par des virgules</small>
+        </div>
+      )}
+    </div>
 
     <Button label="Ajouter" onClick={addTarget} className="mt-3" />
   </div>

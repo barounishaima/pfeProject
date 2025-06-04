@@ -1,25 +1,21 @@
-import service from '../services/taskService';
+const service = require('../services/taskService');
 
 // Used only when task object is returned
 const formatTask = (task) => ({
-  id: task["@id"],
-  name: task["@name"],
-  status: task["@status"],
-  progress: task["@progress"],
-  targetId: task["target"]?.["@id"],
-  targetName: task["target"]?.["@name"],
-  configId: task["config"]?.["@id"],
-  configName: task["config"]?.["@name"],
-  scheduleId: task["schedule"]?.["@id"],
-  scheduleName: task["schedule"]?.["@name"],
-  scannerId: task["scanner"]?.["@id"],
-  scannerName: task["scanner"]?.["@name"],
+  id: task.scanId,
+  name: task.name,
+  status: task.status,
+  targetId: task.targetId,
+  scheduleId: task.scheduleId || null,
+  engagementId: task.engagementId,
+  createdAt: task.createdAt,
+  finishedAt: task.finishedAt || null,
 });
 
 exports.create = async (req, res) => {
   try {
-    const result = await service.createTask(req.body);
-    res.json(formatTask(result.data));
+    const result = await service.createTask(req.body); 
+    res.json(result); 
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -27,13 +23,8 @@ exports.create = async (req, res) => {
 
 exports.getAll = async (_req, res) => {
   try {
-    const result = await service.getTasks();
-    const tasks = Array.isArray(result.data)
-      ? result.data.map(formatTask)
-      : result.data.task
-        ? (Array.isArray(result.data.task) ? result.data.task.map(formatTask) : [formatTask(result.data.task)])
-        : [];
-    res.json(tasks);
+    const tasks = await service.getTasks();
+    res.json(tasks.map(formatTask));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -41,8 +32,8 @@ exports.getAll = async (_req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
-    const result = await service.getTask(req.params.id);
-    res.json(formatTask(result.data));
+    const task = await service.getTask(req.params.id);
+    res.json(formatTask(task));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -50,12 +41,13 @@ exports.getOne = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const result = await service.updateTask(req.params.id, req.body);
-    res.json({ message: result.message || 'Task updated successfully', id: req.params.id });
+    await service.updateTask(req.params.id, req.body);
+    res.json({ message: 'Task updated successfully', id: req.params.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 exports.remove = async (req, res) => {
   try {
@@ -66,9 +58,10 @@ exports.remove = async (req, res) => {
   }
 };
 
+
 exports.start = async (req, res) => {
   try {
-    await service.startTask(req.params.id);
+    await service.startTask(req.params.id); // Assuming this still uses API-only logic
     res.json({ message: 'Task started successfully', id: req.params.id });
   } catch (err) {
     res.status(500).json({ error: err.message });

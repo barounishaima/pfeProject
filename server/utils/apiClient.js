@@ -1,8 +1,8 @@
-import axios from 'axios';
+import axios from'axios';
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: 'http://localhost:8000', // FastAPI backend
   timeout: 10000,
 });
 
-export default router;
+export default api;

@@ -1,12 +1,17 @@
 import express from 'express';
 const router = express.Router();
-import controller from '../controllers/targetController.js';
+import { 
+  create,
+  getAll,
+  getOne,
+  update,
+  remove
+} from '../controllers/targetController.js'; 
 
+router.post('/', create);
+router.get('/', getAll);
+router.get('/:id', getOne);
+router.put('/:id', update);
+router.delete('/:id', remove);
 
-router.post('/', controller.create);
-router.get('/', controller.getAll);
-router.get('/:id', controller.getOne);
-router.put('/:id', controller.update);
-router.delete('/:id', controller.remove);
-
-export default router;
+export { router as targetRouter };

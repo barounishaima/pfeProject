@@ -5,4 +5,4 @@ const router = express.Router();
 
 router.get('/vulnerabilities', getVulnerabilities);
 
-export default router;
+export { router as defectdojoRoutes };

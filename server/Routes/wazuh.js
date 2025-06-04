@@ -5,4 +5,4 @@ const router = express.Router();
 
 router.get('/alerts', getAlerts);
 
-export default router;
+export {router as wazuhRouter};

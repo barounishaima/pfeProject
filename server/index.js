@@ -3,17 +3,17 @@ dotenv.config();
 
 import express from 'express';
 import cors from 'cors';
-import userRoutes from './Routes/Users.js';
+import {userRoutes} from './Routes/Users.js';
 import {connectDB} from './utils/db.js'; // Import the connection function
 import { adminRouter } from './Routes/AdminRoute.js';
 import WebSocket, { WebSocketServer } from 'ws';
 import { setupWazuhWebSocket } from './services/wazuh.js';
 import helmet from 'helmet';
-import defectdojoRoutes from './Routes/defectdojo.js';
-import wazuhRouter from './Routes/wazuh.js';
+import {defectdojoRoutes} from './Routes/defectdojo.js';
+import {wazuhRouter} from './Routes/wazuh.js';
 import http from 'http';
-import targetRouter from './Routes/targetRoutes.js';
-import scheduleRouter from './Routes/scheduleRoutes.js';
+import {targetRouter} from './Routes/targetRoutes.js';
+import {scheduleRouter} from './Routes/scheduleRoutes.js';
 
 
 const app = express();

@@ -11,7 +11,7 @@ const defectDojoClient = axios.create({
 
 async function getActiveFindings() {
   let findings = [];
-  let nextUrl = 'findings/?active=true'; // ✅ No leading slash
+  let nextUrl = 'findings/?active=true';
 
   try {
     while (nextUrl) {
@@ -37,6 +37,19 @@ async function getActiveFindings() {
     console.error('DefectDojo API error:', error.message);
     return [];
   }
+}
+
+export async function createEngagement(productId, name, startDate = new Date()) {
+  const payload = {
+    name,
+    product: productId,
+    target_start: startDate.toISOString().split('T')[0],
+    target_end: startDate.toISOString().split('T')[0],
+    status: 'In Progress',
+  };
+
+  const res = await dojoAPI.post('/engagements/', payload);
+  return res.data.id;
 }
 
 export { getActiveFindings };
