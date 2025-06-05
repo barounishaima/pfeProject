@@ -1,0 +1,4 @@
+fastapi
+uvicorn[standard]
+python-gvm==22.7
+python-dotenv
