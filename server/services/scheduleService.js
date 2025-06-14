@@ -1,30 +1,58 @@
-import api from '../utils/apiClient.js';
-import Schedule from '../models/Schedule.js'
-
+import api from "../utils/apiClient.js";
+import Schedule from "../models/Schedule.js";
 
 // create schedule
+const formatToICalUTC = (date) => {
+  return new Date(date).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+};
 export const createSchedule = async (data) => {
   try {
     // Step 1: Make API call to external system
-    const schedualId = await api.post('/schedules', data);
+    const fastApiPayload = {
+      name: data.name,
+      comment: data.comment || "",
+      time: formatToICalUTC(data.startDate),
+      period: "FREQ=DAILY",
+      until: formatToICalUTC(data.finishDate),
+      timezone: "UTC",
+    };
+
+    const result = await api.post("/schedules", fastApiPayload);
+    const scheduleId = result.data.id;
+    console.log("schedule_id :", scheduleId);
 
     // Step 2: Save the schedule to MongoDB
     const schedule = new Schedule({
-      schedualId: schedualId,
+      scheduleId: scheduleId,
       name: data.name,
-      comment: data.comment || '',
+      comment: data.comment || "",
       startDate: new Date(data.startDate),
       finishDate: new Date(data.finishDate),
     });
 
-    await schedule.save();
+    try {
+      console.log(" schedule being saved to Mongo:", schedule);
+      await schedule.save();
+    } catch (mongoErr) {
+      console.error(" Error while saving schedule to MongoDB:", mongoErr);
+      throw new Error(
+        "Failed to save schedule to MongoDB: " + mongoErr.message
+      );
+    }
 
     return schedule;
-  } catch (error) {
-    throw new Error(`Failed to create schedule: ${error.message}`);
+  }  catch (error) {
+    if (
+      error.response &&
+      error.response.data &&
+      error.response.data.status_text
+    ) {
+      throw new Error(error.response.data.status_text);
+    } else {
+      throw new Error(`Failed to create schedule: ${error.message}`);
+    }
   }
 };
-
 
 // Get all schedules
 export const getSchedules = async () => {
@@ -39,7 +67,7 @@ export const getSchedules = async () => {
 // Get a single schedule by ID
 export const getSchedule = async (id) => {
   try {
-    const schedule = await Schedule.findOne({ schedualId: id });
+    const schedule = await Schedule.findOne({ scheduleId: id });
     if (!schedule) {
       throw new Error(`Schedule with schedualId ${id} not found`);
     }
@@ -57,10 +85,10 @@ export const updateSchedule = async (id, data) => {
 
     // Step 2: Update in MongoDB
     const updated = await Schedule.findOneAndUpdate(
-      { schedualId: id },
+      { scheduleId: id },
       {
         name: data.name,
-        comment: data.comment || '',
+        comment: data.comment || "",
         startDate: new Date(data.startDate),
         finishDate: new Date(data.finishDate),
       },
@@ -77,14 +105,14 @@ export const updateSchedule = async (id, data) => {
   }
 };
 
-// Delete a schedule 
+// Delete a schedule
 export const deleteSchedule = async (id) => {
   try {
     // Step 1: Delete from external system via API
     await api.delete(`/schedules/${id}`);
 
     // Step 2: Delete from MongoDB
-    const deleted = await Schedule.findOneAndDelete({ schedualId: id });
+    const deleted = await Schedule.findOneAndDelete({ scheduleId: id });
 
     if (!deleted) {
       throw new Error(`Schedule with schedualId ${id} not found in MongoDB`);

@@ -1,57 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
-import { AiOutlinePlusCircle } from 'react-icons/ai';
+import { Toast } from 'primereact/toast';
+import { AiOutlinePlusCircle, AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
 import axios from 'axios';
-import { FileUpload } from 'primereact/fileupload';
-
+import './GestionScans.css';
 const GestionScans = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    comment: '',
-    selectedTarget: null,
-    selectedSchedule: null,
-  });
-
+  const [scans, setScans] = useState([]);
+  const [formData, setFormData] = useState({ name: '', comment: '', selectedTarget: null, selectedSchedule: null });
   const [targets, setTargets] = useState([]);
   const [schedules, setSchedules] = useState([]);
-
+  const [showForm, setShowForm] = useState(false);
   const [targetDialogVisible, setTargetDialogVisible] = useState(false);
   const [scheduleDialogVisible, setScheduleDialogVisible] = useState(false);
+  const [editMode, setEditMode] = useState(false); 
+  const [editingScanId, setEditingScanId] = useState(null); 
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [scanToDelete, setScanToDelete] = useState(null);
+
+  const toastRef = useRef(null);
 
   const [newTarget, setNewTarget] = useState({
-    name: '',
-    comment: '',
-    hostType: 'machine',
-    hostIp: '',
-    hostFile: null,
-    excludeHostType: 'une machine',
-    excludeHostIp: '',
-    excludeHostFile: null,
+    name: '', comment: '', hostType: 'machine', hostIp: '', hostFile: null,
+    excludeHostType: 'une machine', excludeHostIp: '', excludeHostFile: null
   });
 
   const [newSchedule, setNewSchedule] = useState({
-    name: '',
-    comment: '',
-    startDate: '',
-    startTime: '',
-    recurrence: 'once',
-    endDate: '',
-    endTime: '',
-    runAlways: true,
+    name: '', comment: '', startDate: '', startTime: '', recurrence: 'once',
+    endDate: '', endTime: '', runAlways: true
   });
 
-  // Load targets and schedules from backend on mount
+  const recurrenceOptions = [
+    { label: 'Once', value: 'once' },
+    { label: 'Daily', value: 'daily' },
+    { label: 'Weekly', value: 'weekly' },
+    { label: 'Hourly', value: 'hourly' },
+    { label: 'Yearly', value: 'yearly' },
+    { label: 'Monthly', value: 'monthly' },
+  ];
+
   useEffect(() => {
+    fetchScans();
     fetchTargets();
     fetchSchedules();
   }, []);
 
+  const fetchScans = async () => {
+    try {
+      const res = await axios.get('/api/scans');
+      setScans(res.data);
+      console.log(res.data);
+    } catch (err) {
+      console.error('Error loading scans:', err);
+    }
+  };
+
   const fetchTargets = async () => {
     try {
-      const res = await axios.get('/api/targets');
+      const res = await axios.get('/api/targets/');
       setTargets(res.data);
     } catch (err) {
       console.error('Error loading targets:', err);
@@ -60,14 +68,13 @@ const GestionScans = () => {
 
   const fetchSchedules = async () => {
     try {
-      const res = await axios.get('/api/schedules');
+      const res = await axios.get('/api/schedules/');
       setSchedules(res.data);
     } catch (err) {
       console.error('Error loading schedules:', err);
     }
   };
 
-  // --- Handlers ---
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -97,31 +104,108 @@ const GestionScans = () => {
     setNewSchedule((prev) => ({ ...prev, startTime: `${hh}:${mm}` }));
   };
 
-  // --- Add Target ---
-  const addTarget = async () => {
-    if (!newTarget.name.trim()) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    if (!editMode) {
+      // For creation, require all fields
+      if (!formData.name.trim() || !formData.selectedTarget || !formData.selectedSchedule) {
+        alert('Veuillez remplir tous les champs.');
+        return;
+      }
+    } else {
+      // For update, require at least one field to be modified (optional)
+      if (!formData.name.trim() && !formData.comment.trim() && !formData.selectedTarget && !formData.selectedSchedule) {
+        alert('Veuillez modifier au moins un champ.');
+        return;
+      }
+    }
+  
+    const payload = {};
+    if (formData.name.trim()) payload.name = formData.name;
+    if (formData.comment.trim()) payload.comment = formData.comment;
+    if (formData.selectedTarget) payload.target_id = formData.selectedTarget?.Id;
+    if (formData.selectedSchedule) payload.schedule_id = formData.selectedSchedule?.id;
+
 
     try {
-      // Prepare form data if files exist
-      let payload = {
-        ...newTarget,
-        hostFile: undefined,
-        excludeHostFile: undefined,
-      };
-
-      // If files exist, you'd normally upload differently, but let's send text fields first:
-      if (newTarget.hostFile || newTarget.excludeHostFile) {
-        // For demo, ignoring files upload
-        alert('File upload not implemented. Please add later.');
+      if (editMode) {
+        await axios.put(`/api/scans/${editingScanId}`, payload);
+        toastRef.current?.show({
+          severity: 'success',
+          summary: 'Scan modifié',
+          detail: `Scan ${editingScanId} mis à jour avec succès.`,
+          life: 3000
+        });
+      } else {
+        await axios.post('/api/scans', payload);
+        toastRef.current?.show({
+          severity: 'success',
+          summary: 'Scan créé',
+          detail: 'Scan ajouté avec succès.',
+          life: 3000
+        });
       }
+  
+      // Reset
+      setFormData({ name: '', comment: '', selectedTarget: null, selectedSchedule: null });
+      setEditingScanId(null);
+      setEditMode(false);
+      setShowForm(false);
+      fetchScans();
+    } catch (err) {
+      console.error('Erreur de soumission:', err);
+      alert('Erreur lors de la soumission du scan.');
+    }
+  };
+  
+  
 
-      const res = await axios.post('/api/targets', payload);
-      const createdTarget = res.data;
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`/api/scans/${id}`);
+      fetchScans();
+    } catch (err) {
+      console.error('Error deleting scan:', err);
+    }
+  };
+  const addTarget = async () => {
+    if (!newTarget.name.trim() || !newTarget.hostIp.trim()) {
+      alert("Veuillez fournir un nom et au moins une adresse IP.");
+      return;
+    }
+  
+    try {
+      // Step 1: Format IP lists
+      const ipList = newTarget.hostIp
+        .split(',')
+        .map(ip => ip.trim())
+        .filter(ip => ip);
+      console.log("ip list  :",ipList);
+  
+      const excludeList = newTarget.excludeHostIp
+        .split(',')
+        .map(ip => ip.trim())
+        .filter(ip => ip);
+      
 
-      setTargets((prev) => [...prev, createdTarget]);
-      setFormData((prev) => ({ ...prev, selectedTarget: createdTarget }));
-
-      // Reset target form
+      // Step 2: Build payload expected by backend
+      const payload = {
+        Name: newTarget.name,
+        Comment: newTarget.comment,
+        IpAdresses: ipList,
+        exclude_hosts: excludeList
+      };
+  
+      // Step 3: Send to backend
+      const res = await axios.post('/api/targets/', payload);
+      console.log(res)
+      const createdTarget = res.id;
+      await fetchTargets();
+      // Step 4: Update UI
+      setTargets(prev => [...prev, createdTarget]);
+      setFormData(prev => ({ ...prev, selectedTarget: createdTarget }));
+  
       setNewTarget({
         name: '',
         comment: '',
@@ -130,183 +214,279 @@ const GestionScans = () => {
         hostFile: null,
         excludeHostType: 'une machine',
         excludeHostIp: '',
-        excludeHostFile: null,
+        excludeHostFile: null
       });
+  
       setTargetDialogVisible(false);
+      toastRef.current?.show({
+        severity: 'success',
+        summary: 'Succès',
+        detail: 'Cible ajoutée avec succès',
+        life: 3000
+      });
     } catch (err) {
       console.error('Error adding target:', err);
-      alert('Erreur lors de l\'ajout de la cible.');
+      alert(err.response?.data?.error || "Erreur lors de l'ajout de la cible.");
     }
   };
-
-  // --- Add Schedule ---
+  
   const addSchedule = async () => {
-    if (!newSchedule.name.trim()) return;
-
+    if (!newSchedule.name.trim() || !newSchedule.startDate || !newSchedule.startTime) {
+      alert("Veuillez remplir le nom, la date et l'heure de début.");
+      return;
+    }
+  
     try {
-      const res = await axios.post('/api/schedules', newSchedule);
+      const startDateTime = new Date(`${newSchedule.startDate}T${newSchedule.startTime}`);
+      const isoStart = startDateTime.toISOString();
+  
+      let isoFinish = isoStart; // Default value
+      if (newSchedule.recurrence !== 'once' && !newSchedule.runAlways) {
+        if (!newSchedule.endDate || !newSchedule.endTime) {
+          alert("Veuillez fournir une date et heure de fin.");
+          return;
+        }
+        const finishDateTime = new Date(`${newSchedule.endDate}T${newSchedule.endTime}`);
+        isoFinish = finishDateTime.toISOString();
+      }
+  
+      const payload = {
+        name: newSchedule.name,
+        comment: newSchedule.comment || '',
+        startDate: isoStart,
+        finishDate: isoFinish,
+      };
+  
+      const res = await axios.post('/api/schedules/', payload);
       const createdSchedule = res.data;
-
+      console.log("payload",payload);
+      console.log("resultat",res.data);
+      await fetchSchedules();
       setSchedules((prev) => [...prev, createdSchedule]);
       setFormData((prev) => ({ ...prev, selectedSchedule: createdSchedule }));
-
       setNewSchedule({
-        name: '',
-        comment: '',
-        startDate: '',
-        startTime: '',
-        recurrence: 'once',
-        endDate: '',
-        endTime: '',
-        runAlways: true,
+        name: '', comment: '', startDate: '', startTime: '',
+        recurrence: 'once', endDate: '', endTime: '', runAlways: true
       });
       setScheduleDialogVisible(false);
-    } catch (err) {
-      console.error('Error adding schedule:', err);
-      alert('Erreur lors de l\'ajout de l\'horaire.');
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!formData.name.trim()) {
-      alert('Veuillez entrer un nom pour le scan.');
-      return;
-    }
-    if (!formData.selectedTarget) {
-      alert('Veuillez sélectionner une cible.');
-      return;
-    }
-    if (!formData.selectedSchedule) {
-      alert('Veuillez sélectionner un horaire.');
-      return;
-    }
-
-    try {
-      // Prepare scan data
-      const payload = {
-        name: formData.name,
-        comment: formData.comment,
-        targetId: formData.selectedTarget._id || formData.selectedTarget.id || formData.selectedTarget.name, // adjust according to backend
-        scheduleId: formData.selectedSchedule._id || formData.selectedSchedule.id || formData.selectedSchedule.name,
-      };
-
-      const res = await axios.post('/api/scans', payload);
-
-      alert('Scan créé avec succès !');
-
-      // Reset form
-      setFormData({
-        name: '',
-        comment: '',
-        selectedTarget: null,
-        selectedSchedule: null,
+      toastRef.current?.show({
+        severity: 'success',
+        summary: 'Succès',
+        detail: 'Horaire ajouté avec succès',
+        life: 3000
       });
     } catch (err) {
-      console.error('Error creating scan:', err);
-      alert('Erreur lors de la création du scan.');
+      console.error('Error adding schedule:', err);
+      alert(err.response?.data?.error || "Erreur lors de l'ajout de la cible.");
     }
   };
-
-  const recurrenceOptions = [
-    { label: 'Once', value: 'once' },
-    { label: 'Daily', value: 'daily' },
-    { label: 'Weekly', value: 'weekly' },
-    { label: 'Hourly', value: 'hourly' },
-    { label: 'Yearly', value: 'yearly' },
-    { label: 'Monthly', value: 'monthly' },
-  ];
-
+ 
+  const startScan = async (id) => {
+    try {
+      await axios.post(`/api/scans/${id}`);
+      toastRef.current?.show({
+        severity: 'success',
+        summary: 'Scan lancé',
+        detail: `Scan ${id} démarré avec succès.`,
+        life: 3000
+      });
+      console.log("taks started");
+      fetchScans(); // Refresh scan list
+    } catch (err) {
+      console.error('Erreur lors du démarrage du scan:', err);
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'Erreur',
+        detail: `Impossible de démarrer le scan.`,
+        life: 3000
+      });
+    }
+  };
+  const updateScan = async (id, updatedData) => {
+    try {
+      await axios.put(`/api/scans/${id}`, updatedData);
+      toastRef.current?.show({
+        severity: 'success',
+        summary: 'Scan mis à jour',
+        detail: `Scan ${id} mis à jour.`,
+        life: 3000
+      });
+      fetchScans(); // Refresh list
+    } catch (err) {
+      console.error('Erreur mise à jour:', err);
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'Erreur',
+        detail: `Échec de la mise à jour du scan.`,
+        life: 3000
+      });
+    }
+  };
+  const openEditDialog = (scan) => {
+    const matchedTarget = targets.find(t => t.TargetId === scan.target_Id);
+    const matchedSchedule = schedules.find(s => s.id === scan.schedule_Id);
+  console.log(scan);
+    setFormData({
+      name: scan.name || '',
+      comment: scan.comment || '',
+      selectedTarget: matchedTarget || null,
+      selectedSchedule: matchedSchedule || null,
+    });
+  
+    setEditingScanId(scan.id);
+    setEditMode(true);
+    setShowForm(true);
+  };
+  const confirmDelete = async () => {
+    try {
+      await axios.delete(`/api/scans/${scanToDelete.id}`);
+      toastRef.current?.show({
+        severity: 'success',
+        summary: 'Supprimé',
+        detail: `Scan "${scanToDelete.name}" supprimé avec succès.`,
+        life: 3000,
+      });
+      fetchScans();
+    } catch (err) {
+      console.error('Erreur lors de la suppression:', err);
+      toastRef.current?.show({
+        severity: 'error',
+        summary: 'Erreur',
+        detail: `Échec de la suppression du scan.`,
+        life: 3000,
+      });
+    } finally {
+      setDeleteDialogVisible(false);
+      setScanToDelete(null);
+    }
+  };
+  
+  
+  
+  
   return (
-    <div className="container mt-5" style={{ maxWidth: '700px', margin: 'auto' }}>
-      <form
-        onSubmit={handleSubmit}
-        className="p-4"
-        style={{
-          border: '1px solid #ccc',
-          borderRadius: '15px',
-          boxShadow: '0 0 10px rgba(0,0,0,0.1)',
-          backgroundColor: '#fff',
-        }}
-      >
-        <h2 className="text-center mb-4">Créer un Scan</h2>
+    <div className="container mt-5">
+      <Toast ref={toastRef} />
 
-        {/* Name */}
-        <label htmlFor="name" className="mb-1">
-          Nom :
-        </label>
-        <InputText
-          id="name"
-          name="name"
-          className="w-full mb-3"
-          value={formData.name}
-          onChange={handleFormChange}
-          placeholder="Entrez le nom"
-        />
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h2>Liste des Scans</h2>
+        <Button label="Créer Scan" icon="pi pi-plus" onClick={() => setShowForm(true)} />
+      </div>
 
-        {/* Comment */}
-        <label htmlFor="comment" className="mb-1">
-          Commentaire :
-        </label>
-        <InputText
-          id="comment"
-          name="comment"
-          className="w-full mb-3"
-          value={formData.comment}
-          onChange={handleFormChange}
-          placeholder="Entrez un commentaire"
-        />
+      <table className="table table-bordered">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Cible</th>
+            <th>Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {scans.map((scan) => (
+            <tr key={scan.id}>
+              <td>{scan.name}</td>
+              <td>{targets.find(t => t.TargetId === scan.target_Id)?.Name || '---'}</td>
+              <td>{scan.status}</td>
+            <td>
+              <div className="button-group">
+                <Button 
+                  icon="pi pi-play" 
+                  className="p-button-text scan-btn-green"  
+                  onClick={() => startScan(scan.id)} 
+                />
+                <Button 
+                  icon={<AiOutlineEdit />} 
+                  className="p-button-text scan-btn-blue" 
+                  onClick={() => openEditDialog(scan)} 
+                />
+                <Button 
+                  icon={<AiOutlineDelete />} 
+                  className="p-button-text scan-btn-red" 
+                  onClick={() => {
+                    setScanToDelete(scan);
+                    setDeleteDialogVisible(true);
+                  }} 
+                />
+              </div>
+            </td>
 
-        {/* Targets */}
-        <div className="mb-3">
-          <label>Target :</label>
-          <div className="d-flex align-items-center">
-            <Dropdown
-              value={formData.selectedTarget}
-              options={targets}
-              optionLabel="name"
-              placeholder="Sélectionnez une cible"
-              className="w-full mr-2"
-              style={{ flex: 1 }}
-              onChange={(e) => setFormData((prev) => ({ ...prev, selectedTarget: e.value }))}
-            />
-            <AiOutlinePlusCircle
-              size={24}
-              onClick={() => setTargetDialogVisible(true)}
-              style={{ margin: '20px', cursor: 'pointer' }}
-            />
+
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <Dialog header="Créer un Scan" visible={showForm} onHide={() => setShowForm(false)} style={{ width: '700px' }} modal>
+        <form onSubmit={handleSubmit}>
+          <div className="field">
+            <label>Nom</label>
+            <InputText name="name" value={formData.name} onChange={handleFormChange} className="w-full" />
           </div>
-        </div>
-
-        {/* Schedules */}
-        <div className="mb-3">
-          <label>Schedule :</label>
-          <div className="d-flex align-items-center">
-            <Dropdown
-              value={formData.selectedSchedule}
-              options={schedules}
-              optionLabel="name"
-              placeholder="Sélectionnez un horaire"
-              className="w-full mr-2"
-              style={{ flex: 1 }}
-              onChange={(e) => setFormData((prev) => ({ ...prev, selectedSchedule: e.value }))}
-            />
-            <AiOutlinePlusCircle
-              size={24}
-              onClick={() => setScheduleDialogVisible(true)}
-              style={{ margin: '20px', cursor: 'pointer' }}
-            />
+          <div className="field">
+            <label>Commentaire</label>
+            <InputText name="comment" value={formData.comment} onChange={handleFormChange} className="w-full" />
           </div>
-        </div>
+          <div className="field">
+            <label>Cible</label>
+            <div className="d-flex align-items-center">
+            <Dropdown
+  value={formData.selectedTarget}
+  options={targets.filter(t => t && t.Name)}
+  optionLabel="Name"
+  onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      selectedTarget: e.value
+    }))
+  }
+  className="w-full mr-2"
+  placeholder="Sélectionnez une cible"
+/>
 
-        <Button label="Créer" icon="pi pi-check" type="submit" className="w-full" />
 
-        {/* Target Dialog */}
+
+              <AiOutlinePlusCircle size={24} onClick={() => setTargetDialogVisible(true)} style={{ cursor: 'pointer', color: '#000' }} />
+              
+            </div>
+          </div>
+          <div className="field">
+            <label>Horaire</label>
+            <div className="d-flex align-items-center">
+            <Dropdown
+  value={formData.selectedSchedule}
+  options={schedules.filter(s => s && s.name)}
+  optionLabel="name"
+  onChange={(e) =>
+    setFormData((prev) => ({
+      ...prev,
+      selectedSchedule: e.value
+    }))
+  }
+  className="w-full mr-2"
+  placeholder="Sélectionnez un horaire"
+/>
+
+
+
+              <AiOutlinePlusCircle size={24} onClick={() => setScheduleDialogVisible(true)} style={{ cursor: 'pointer' }} />
+            </div>
+          </div>
+          <Button label="Valider" type="submit" className="mt-2" />
+        </form>
+      </Dialog>
+
+       {/* Target Dialog */}
 <Dialog
   header="Ajouter une nouvelle cible"
   visible={targetDialogVisible}
-  onHide={() => setTargetDialogVisible(false)}
+  onHide={() => {
+    setShowForm(false);
+    setEditMode(false);
+    setEditingScanId(null);
+    setFormData({ name: '', comment: '', selectedTarget: null, selectedSchedule: null });
+  }}
+  
   style={{ width: '600px' }}
   modal
   draggable={false}
@@ -447,33 +627,23 @@ const GestionScans = () => {
   </div>
 </Dialog>
 
-
-        {/* Schedule Dialog */}
-        <Dialog
+ {/* Schedule Dialog */}
+<Dialog
   header="Ajouter un nouvel horaire"
   visible={scheduleDialogVisible}
   onHide={() => setScheduleDialogVisible(false)}
   style={{ width: '600px' }}
   modal
-  draggable={false}
-  resizable={false}
 >
   <div className="p-fluid">
     <div className="field">
       <label>Nom</label>
-      <InputText
-        name="name"
-        value={newSchedule.name}
-        onChange={handleNewScheduleChange}
-      />
+      <InputText name="name" value={newSchedule.name} onChange={handleNewScheduleChange} />
     </div>
+
     <div className="field">
       <label>Commentaire</label>
-      <InputText
-        name="comment"
-        value={newSchedule.comment}
-        onChange={handleNewScheduleChange}
-      />
+      <InputText name="comment" value={newSchedule.comment} onChange={handleNewScheduleChange} />
     </div>
 
     <div className="field">
@@ -494,12 +664,7 @@ const GestionScans = () => {
         value={newSchedule.startTime}
         onChange={handleNewScheduleChange}
       />
-      <Button
-        label="Maintenant"
-        onClick={setTimeNow}
-        className="ml-2"
-        size="small"
-      />
+      <Button label="Maintenant" onClick={setTimeNow} className="ml-2" size="small" />
     </div>
 
     <div className="field">
@@ -507,13 +672,26 @@ const GestionScans = () => {
       <Dropdown
         value={newSchedule.recurrence}
         options={recurrenceOptions}
-        onChange={(e) =>
-          setNewSchedule((prev) => ({ ...prev, recurrence: e.value }))
-        }
+        onChange={(e) => setNewSchedule((prev) => ({ ...prev, recurrence: e.value }))}
         placeholder="Sélectionnez la récurrence"
       />
     </div>
 
+    {/* ✅ Show checkbox only if recurrence is NOT 'once' */}
+    {newSchedule.recurrence !== 'once' && (
+      <div className="field-checkbox">
+        <input
+          type="checkbox"
+          name="runAlways"
+          checked={newSchedule.runAlways}
+          onChange={handleNewScheduleChange}
+          id="runAlways"
+        />
+        <label htmlFor="runAlways" className="ml-2">Exécuter toujours</label>
+      </div>
+    )}
+
+    {/* ✅ Show end date/time only if recurrence is NOT once and NOT runAlways */}
     {(newSchedule.recurrence !== 'once' && !newSchedule.runAlways) && (
       <>
         <div className="field">
@@ -538,23 +716,41 @@ const GestionScans = () => {
       </>
     )}
 
-    <div className="field-checkbox">
-      <input
-        type="checkbox"
-        name="runAlways"
-        checked={newSchedule.runAlways}
-        onChange={handleNewScheduleChange}
-        id="runAlways"
-      />
-      <label htmlFor="runAlways" className="ml-2">
-        Exécuter toujours
-      </label>
-    </div>
-
-    <Button label="Ajouter" onClick={addSchedule} className="mt-3" />
+    <Button label="Ajouter" type='submit' onClick={addSchedule} className="mt-3" />
   </div>
 </Dialog>
-      </form>
+<Dialog
+  header="Confirmer la suppression"
+  visible={deleteDialogVisible}
+  onHide={() => setDeleteDialogVisible(false)}
+  style={{ width: '500px' }}
+  modal
+  footer={
+    <div>
+      <Button 
+        label="Annuler" 
+        icon="pi pi-times" 
+        onClick={() => setDeleteDialogVisible(false)} 
+        className="p-button-text" 
+      />
+      <Button 
+        label="Supprimer" 
+        icon="pi pi-check" 
+        onClick={confirmDelete} 
+        severity="danger" 
+      />
+    </div>
+  }
+>
+  <div className="confirmation-content">
+    <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+    <span>
+      Êtes-vous sûr de vouloir supprimer le scan <b>{scanToDelete?.name}</b> ?
+    </span>
+  </div>
+</Dialog>
+
+
     </div>
   );
 };

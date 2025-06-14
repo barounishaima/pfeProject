@@ -1,10 +1,12 @@
-import * as service from '../services/scheduleService.js'; // Added .js extension
+//controllers/scheduleController.js
+
+import * as service from "../services/scheduleService.js"; // Added .js extension
 
 // Format a Schedule document into a frontend-friendly object
 const formatSchedule = (s) => ({
-  id: s.schedualId,
+  id: s.schedulId,
   name: s.name,
-  comment: s.comment || '',
+  comment: s.comment || "",
   startDate: s.startDate,
   finishDate: s.finishDate,
   createdAt: s.createdAt,
@@ -17,8 +19,8 @@ export const create = async (req, res) => {
     const schedule = await service.createSchedule(req.body);
     res.json({
       success: true,
-      id: schedule.schedualId,
-      message: 'Schedule created successfully',
+      id: schedule.scheduleId,
+      message: "Schedule created successfully",
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -51,7 +53,7 @@ export const update = async (req, res) => {
     const updated = await service.updateSchedule(req.params.id, req.body);
     res.json({
       success: true,
-      message: 'Schedule updated successfully',
+      message: "Schedule updated successfully",
       updated: formatSchedule(updated),
     });
   } catch (err) {
@@ -65,7 +67,7 @@ export const remove = async (req, res) => {
     const deleted = await service.deleteSchedule(req.params.id);
     res.json({
       success: true,
-      message: 'Schedule deleted successfully',
+      message: "Schedule deleted successfully",
       deletedId: deleted.schedualId,
     });
   } catch (err) {

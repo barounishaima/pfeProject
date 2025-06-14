@@ -1,8 +1,8 @@
-const api = require('../utils/apiClient');
-import ReportSummary from '../models/ReportSummary';
+import api from '../utils/apiClient.js';
+import ReportSummary from '../models/ReportSummary.js';
 
 // Get all report summaries for a given task (scan)
-exports.getResultsForTask = async (taskId) => {
+export const getResultsForTask = async (taskId) => {
   try {
     const results = await ReportSummary.find({ scanId: taskId }).exec();
     return results;
@@ -12,7 +12,7 @@ exports.getResultsForTask = async (taskId) => {
 };
 
 // Get detail for a single report summary by its MongoDB _id
-exports.getResultDetail = async (resultId) => {
+export const getResultDetail = async (resultId) => {
   try {
     const result = await ReportSummary.findById(resultId).exec();
     if (!result) {
@@ -24,4 +24,7 @@ exports.getResultDetail = async (resultId) => {
   }
 };
 
-exports.getReport = (reportId, format = 'xml') => api.get(`/reports/${reportId}`, { params: { format } });
+// Get the actual report from the GVM API
+export const getReport = (reportId, format = 'xml') => {
+  return api.get(`/reports/${reportId}`, { params: { format } });
+};

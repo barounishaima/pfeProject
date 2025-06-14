@@ -1,14 +1,15 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const scanSchema = new mongoose.Schema({
-  scanId: { type: String, required: true, unique: true }, // GVM task ID
+  scanId: { type: String, required: true, unique: true },
   name: { type: String, required: true },
+  comment: { type: String },
   status: { type: String, required: true },
-  targetId: { type: String, required: true },
-  scheduleId: { type: String },
-  engagementId: { type: Number, required: true }, // DefectDojo engagement ID
+  target_Id: { type: String, required: true },
+  schedule_Id: { type: String },
+  engagementId: { type: Number, required: true },
   createdAt: { type: Date, required: true },
-  finishedAt: { type: Date }
+  finishedAt: { type: Date },
 });
 
-export default mongoose.model('Scan', scanSchema);
+export default mongoose.model("Scan", scanSchema);

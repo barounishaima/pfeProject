@@ -1,8 +1,11 @@
+//routes/wazuh.js
+
 import express from 'express';
-import { getAlerts } from '../controllers/wazuh.js';
+import { syncWazuhAlerts, getWazuhAlerts } from '../controllers/wazuh.js';
 
 const router = express.Router();
 
-router.get('/alerts', getAlerts);
+router.post('/sync', syncWazuhAlerts);
+router.get('/', getWazuhAlerts);
 
-export {router as wazuhRouter};
+export default router;

@@ -26,24 +26,29 @@ function App() {
         <Route path='/adminlogin' element={<Login />} />
 
         {/* Protected Routes */}
-        <Route element={<ProtectedRoute allowedRoles={['user', 'manager']} />}>
-          <Route path='/dashboard' element={<Dashboard />}>
-            <Route index element={<Home />} />
-            <Route path='vulnerabilites' element={<ListeVulnerabilite />} />
-            <Route path='MesTickets' element={<TicketUtilisateur />} />
-            <Route path='scans' element={<HistoriqueDesScans />} />
+            <Route element={<ProtectedRoute allowedRoles={['user', 'manager']} />}>
+      <Route path='/dashboard' element={<Dashboard />}>
+        <Route index element={<Home />} />
 
-            {/* Manager-only routes */}
-            <Route element={<ProtectedRoute allowedRoles={['manager']} />}>
-              
-              <Route path='gestionScans' element={<GestionScans />} />
-          
-              <Route path='gestionUtilisateurs' element={<GestionUtilisateurs />} />
-              <Route path='AddUser' element={<AddUser />} />
-              <Route path='tickets' element={<ListesDesTickets />} />
-            </Route>
-          </Route>
+        {/* Shared route (both user and manager) */}
+        <Route path='vulnerabilites' element={<ListeVulnerabilite />} />
+        <Route path='scans' element={<HistoriqueDesScans />} />
+
+        {/* Only for user */}
+        <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+          <Route path='MesTickets' element={<TicketUtilisateur />} />
         </Route>
+
+        {/* Only for manager */}
+        <Route element={<ProtectedRoute allowedRoles={['manager']} />}>
+          <Route path='tickets' element={<ListesDesTickets />} />
+          <Route path='gestionScans' element={<GestionScans />} />
+          <Route path='gestionUtilisateurs' element={<GestionUtilisateurs />} />
+          <Route path='AddUser' element={<AddUser />} />
+        </Route>
+      </Route>
+    </Route>
+
 
         {/* Fallback */}
         <Route path='*' element={<Navigate to='/' replace />} />

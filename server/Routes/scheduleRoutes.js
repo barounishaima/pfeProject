@@ -1,5 +1,4 @@
 import express from "express";
-const router = express.Router();
 import { 
   create, 
   getAll, 
@@ -8,10 +7,12 @@ import {
   remove 
 } from "../controllers/scheduleController.js";
 
+const router = express.Router();
+
 router.post("/", create);
 router.get("/", getAll);
 router.get("/:id", getOne);
 router.put("/:id", update);
 router.delete("/:id", remove);
 
-export { router as scheduleRouter };
+export default router;

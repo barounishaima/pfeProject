@@ -1,12 +1,13 @@
 import express from 'express';
-const router = express.Router();
-import { 
+import {
   create,
   getAll,
   getOne,
   update,
   remove
-} from '../controllers/targetController.js'; 
+} from '../controllers/targetController.js';
+
+const router = express.Router();
 
 router.post('/', create);
 router.get('/', getAll);
@@ -14,4 +15,4 @@ router.get('/:id', getOne);
 router.put('/:id', update);
 router.delete('/:id', remove);
 
-export { router as targetRouter };
+export default router;

@@ -1,99 +1,254 @@
-const { 
-    createCase, 
-    getAllCases, 
-    updateCase, 
-    deleteCase 
-} = require('../services/theHiveService');
-  
-const createNewCase = async (req, res) => {
-    try {
-        if (!req.body.title || !req.body.owner) {
-            return res.status(400).json({ error: "Missing title or owner" });
-        }
-        if (req.body.severity && (req.body.severity < 1 || req.body.severity > 4)) {
-            return res.status(400).json({ error: "Severity must be 1-4" });
-        }
-      
-        const newCase = await createCase(req.body);
-        res.status(201).json({
-          id: newCase.caseId, // Use numeric ID
-          title: newCase.title,
-          owner: newCase.owner,
-          status: newCase.status
-        });
-    } catch (error) {
-      console.error('TheHive API Error (createNewCase):', {
-        status: error.response?.status,
-        data: error.response?.data,
-        request: error.config?.data
-      });
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || 'Case creation failed'
-      });
+import {
+  createCase,
+  getAllCasesFromTheHive,
+  getCaseFromTheHive,
+  getAllTickets,
+  getTicketById,
+  updateCase,
+  deleteCase,
+  statusChangeCustom,
+  createTicketInMongo,
+  closeTicketAndLinkedCases
+} from '../services/theHiveService.js';
+
+// Create new case in TheHive + Mongo
+export const createNewCase = async (req, res) => {
+  try {
+    if (!req.body.title || !req.body.owner) {
+      return res.status(400).json({ error: "Missing title or owner" });
     }
-};
-  
-const getCases = async (req, res) => {
-    try {
-        const cases = await getAllCases();
-        const formattedCases = cases.map(c => ({
-          displayId: c.caseId,    // Numeric ID for display
-          apiId: c.id,            // Elasticsearch ID for operations
-          title: c.title,
-          owner: c.owner,
-          status: c.status
-        }));
-        res.status(200).json(formattedCases);
-    } catch (error) {
-      console.error('TheHive API Error (getCases):', {
-        status: error.response?.status,
-        data: error.response?.data,
-        request: error.config?.data
-      });
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || 'Failed to retrieve cases'
-      });
+    if (req.body.severity && (req.body.severity < 1 || req.body.severity > 4)) {
+      return res.status(400).json({ error: "Severity must be 1-4" });
     }
+
+    const newCase = await createCase(req.body);
+    res.status(201).json({
+      id: newCase.caseId,
+      apiId: newCase._id,
+      title: newCase.title,
+      owner: newCase.owner,
+      status: newCase.status
+    });
+  } catch (error) {
+    console.error('TheHive API Error (createNewCase):', {
+      status: error.response?.status,
+      data: error.response?.data,
+      request: error.config?.data
+    });
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || 'Case creation failed'
+    });
+  }
 };
-  
-const modifyCase = async (req, res) => {
-    try {
-      if (!req.params.caseId) {
-        return res.status(400).json({ error: "Missing caseId parameter" });
-      }
-  
-      const updatedCase = await updateCase(req.params.caseId, req.body);
-      res.status(200).json(updatedCase);
-    } catch (error) {
-      console.error('TheHive API Error (modifyCase):', {
-        status: error.response?.status,
-        data: error.response?.data,
-        request: error.config?.data
-      });
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || 'Failed to update case'
-      });
+
+// Get all cases from TheHive
+export const getCasesFromTheHive = async (req, res) => {
+  try {
+    const { rangeStart = 0, rangeEnd = 100 } = req.query;
+    const cases = await getAllCasesFromTheHive(rangeStart, rangeEnd);
+
+    if (!Array.isArray(cases)) {
+      console.warn('getAllCasesFromTheHive did not return an array:', cases);
+      return res.status(500).json({ error: 'Unexpected response format from TheHive' });
     }
+
+    const formattedCases = cases.map(c => ({
+      displayId: c.caseId,
+      apiId: c.id,
+      title: c.title,
+      owner: c.owner,
+      status: c.status,
+      severity: c.severity,
+      createdAt: c.createdAt
+    }));
+
+    res.status(200).json(formattedCases);
+  } catch (error) {
+    console.error('Error in getCasesFromTheHive:', error.message);
+    res.status(500).json({ error: 'Failed to fetch cases from TheHive' });
+  }
 };
-  
-const removeCase = async (req, res) => {
-    try {
-      if (!req.params.caseId) {
-        return res.status(400).json({ error: "Missing caseId parameter" });
-      }
-  
-      await deleteCase(req.params.caseId);
-      res.status(204).send();
-    } catch (error) {
-      console.error('TheHive API Error (removeCase):', {
-        status: error.response?.status,
-        data: error.response?.data,
-        request: error.config?.data
-      });
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || 'Failed to delete case'
-      });
+
+// Get single case from TheHive by caseId
+export const getSingleCaseFromTheHive = async (req, res) => {
+  try {
+    const caseData = await getCaseFromTheHive(req.params.caseId);
+    res.status(200).json(caseData);
+  } catch (error) {
+    console.error('Error (getSingleCaseFromTheHive):', error.message);
+    res.status(500).json({ error: 'Failed to fetch case from TheHive' });
+  }
+};
+
+// Get all stored tickets from Mongo
+export const getAllStoredTickets = async (req, res) => {
+  try {
+    const tickets = await getAllTickets();
+    res.status(200).json(tickets);
+  } catch (error) {
+    console.error('Error (getAllStoredTickets):', error.message);
+    res.status(500).json({ error: 'Failed to fetch tickets from DB' });
+  }
+};
+
+// Get one ticket from Mongo by TicketId
+export const getTicket = async (req, res) => {
+  try {
+    const ticket = await getTicketById(req.params.ticketId);
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' });
     }
+    res.status(200).json(ticket);
+  } catch (error) {
+    console.error('Error (getTicket):', error.message);
+    res.status(500).json({ error: 'Failed to fetch ticket' });
+  }
 };
-  
-module.exports = { createNewCase, getCases, modifyCase, removeCase };
+
+// Update case in TheHive and Mongo
+export const modifyCase = async (req, res) => {
+  try {
+    if (!req.params.caseId) {
+      return res.status(400).json({ error: "Missing caseId parameter" });
+    }
+
+    const updatedCase = await updateCase(req.params.caseId, req.body);
+    res.status(200).json(updatedCase);
+  } catch (error) {
+    console.error('TheHive API Error (modifyCase):', {
+      status: error.response?.status,
+      data: error.response?.data,
+      request: error.config?.data
+    });
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || 'Failed to update case'
+    });
+  }
+};
+
+// Delete case in TheHive and Mongo
+export const removeCase = async (req, res) => {
+  try {
+    if (!req.params.caseId) {
+      return res.status(400).json({ error: "Missing caseId parameter" });
+    }
+
+    await deleteCase(req.params.caseId);
+    res.status(204).send();
+  } catch (error) {
+    console.error('TheHive API Error (removeCase):', {
+      status: error.response?.status,
+      data: error.response?.data,
+      request: error.config?.data
+    });
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || 'Failed to delete case'
+    });
+  }
+};
+
+// Update the AffectedTo attribute (owner)
+export const updateAffectedTo = async (req, res) => {
+  try {
+    const { caseId } = req.params;
+    const { newAnalyst } = req.body;
+
+    if (!newAnalyst) {
+      return res.status(400).json({ error: 'Missing newAnalyst in body' });
+    }
+
+    const updatedCase = await updateCase(caseId, { owner: newAnalyst });
+
+    res.status(200).json({
+      message: 'AffectedTo updated successfully',
+      updatedCase
+    });
+  } catch (error) {
+    console.error('Error updating AffectedTo:', {
+      error: error.message,
+      stack: error.stack
+    });
+
+    res.status(500).json({ error: 'Failed to update AffectedTo field' });
+  }
+};
+
+// Update only status in Mongo (custom statuses)
+export const changeTicketStatusByAnalyst = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { newStatus } = req.body;
+
+    if (!ticketId || !newStatus) {
+      return res.status(400).json({ error: "Missing ticketId or newStatus" });
+    }
+
+    const updatedTicket = await statusChangeCustom(ticketId, newStatus); // 👈 CORRECTED
+
+    res.status(200).json({
+      message: `Ticket status updated to '${newStatus}'`,
+      ticket: updatedTicket
+    });
+  } catch (error) {
+    console.error('Error in changeTicketStatusByAnalyst:', error);
+    res.status(500).json({ error: error.message || 'Failed to update ticket status' });
+  }
+};
+
+// Close ticket by manager (sets status to 'closed')
+export const closeTicketByManager = async (req, res) => {
+  try {
+    const { ticketIdId } = req.params; // You may want to rename this param to ticketId for clarity
+
+    if (!ticketId) {
+      return res.status(400).json({ error: "Missing ticketId parameter" });
+    }
+
+    // Use the new service function to close linked cases and ticket
+    const closedTicket = await closeTicketAndLinkedCases(ticketId);
+
+    res.status(200).json({
+      message: "Ticket and linked TheHive cases closed successfully",
+      ticket: closedTicket
+    });
+  } catch (error) {
+    console.error('Error in closeTicketByManager:', error);
+    res.status(error.response?.status || 500).json({
+      error: error.response?.data?.message || error.message || 'Failed to close ticket and linked cases'
+    });
+  }
+};
+
+export const createNewTicket = async (req, res) => {
+  try {
+    const { Title, AffectedTo, TicketId, ResolvedDate, Vulnerabilities, TicketStatus } = req.body;
+
+    if (!Title) {
+      return res.status(400).json({ error: "Missing required field: Title" });
+    }
+
+    // Ensure status is valid if provided
+    const allowedStatuses = ['not resolved', 'resolvedByUser', 'resolvedBySystem', 'closed'];
+    if (TicketStatus && !allowedStatuses.includes(TicketStatus)) {
+      return res.status(400).json({ error: `Invalid TicketStatus: must be one of ${allowedStatuses.join(', ')}` });
+    }
+
+    const newTicket = {
+      Title,
+      AffectedTo,
+      ResolvedDate,
+      Vulnerabilities
+    };
+
+    const savedTicket = await createTicketInMongo(newTicket);
+
+    res.status(201).json({
+      message: 'Ticket created successfully',
+      ticket: savedTicket
+    });
+
+  } catch (error) {
+    console.error('Error (createNewTicket):', error.message);
+    res.status(500).json({ error: 'Failed to create ticket in MongoDB' });
+  }
+};

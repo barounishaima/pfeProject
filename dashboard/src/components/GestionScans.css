@@ -1,74 +1,184 @@
-/* Add to GestionScans.css */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+
+/* ===== General Layout ===== */
+.container {
+  padding: 2rem;
+  background-color: #f9fafa;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-family: 'Segoe UI', sans-serif;
 }
 
-.loading-text {
+/* ===== Title and Top Bar ===== */
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1.2rem;
+}
+
+.d-flex {
   display: flex;
+}
+
+.justify-content-between {
+  justify-content: space-between;
+}
+
+.align-items-center {
   align-items: center;
-  gap: 0.5rem;
 }
 
-.spinner {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
+.mb-3 {
+  margin-bottom: 1.5rem;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.table-responsive {
-  overflow-x: auto;
-}
-
-table {
+/* ===== Table Styles ===== */
+.table {
   width: 100%;
   border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-th, td {
-  padding: 0.75rem;
+.table th, .table td {
+  padding: 1rem;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.status-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
+.table thead {
+  background-color: #f5f7fa;
 }
 
-.status-badge.running {
-  background-color: #e8f4f8;
-  color: #3498db;
+.table th {
+  color: #34495e;
+  font-weight: 600;
 }
 
-.status-badge.completed {
-  background-color: #e8f8f0;
-  color: #2ecc71;
+.table tr:hover {
+  background-color: #f9fcff;
 }
 
-.status-badge.failed {
-  background-color: #fdecea;
-  color: #e74c3c;
+/* ===== Buttons ===== */
+button, .p-button {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-.empty-state {
-  text-align: center;
+.p-button-success {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.p-button-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.p-button:hover {
+  transform: scale(1.04);
+}
+
+/* ===== Action Icons Row ===== */
+td > .p-button-text {
+  background-color: #f4f6f8;
+  margin-right: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+td > .p-button-text:hover {
+  background-color: #e1e9f0;
+  transform: scale(1.08);
+}
+
+/* ===== Form Styling ===== */
+.field {
+  margin-bottom: 1.5rem;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.p-inputtext, .p-dropdown {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #dce3ea;
+  font-size: 0.95rem;
+}
+
+textarea {
+  resize: vertical;
+  font-size: 0.95rem;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+/* ===== Dialog (Modal) ===== */
+.p-dialog .p-dialog-content {
   padding: 2rem;
-  color: #7f8c8d;
 }
+
+.p-dialog .p-dialog-header {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #34495e;
+}
+
+/* ===== Toast Notification ===== */
+.p-toast {
+  font-size: 0.95rem;
+}
+
+/* ===== Input helper text ===== */
+.p-text-secondary {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.scan-btn-green .pi {
+  color: #27ae60 !important; /* Green */
+}
+
+.scan-btn-blue svg {
+  color: #2980b9 !important; /* Blue */
+}
+
+.scan-btn-red svg {
+  color: #e74c3c !important; /* Red */
+}
+
+/* Optional: Hover tint */
+.scan-btn-green:hover .pi,
+.scan-btn-blue:hover svg,
+.scan-btn-red:hover svg {
+  filter: brightness(1.2);
+}
+.button-group {
+  display: flex;
+  gap: 0.5rem; /* or use 8px, 1rem, etc. depending on spacing you want */
+  align-items: center;
+}
+

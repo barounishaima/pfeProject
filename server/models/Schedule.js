@@ -1,30 +1,34 @@
-// models/Schedule.js
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const scheduleSchema = new mongoose.Schema({
-  schedualId: {
+  scheduleId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   name: {
     type: String,
-    required: true
+    required: true,
   },
   comment: {
     type: String,
-    default: ''
   },
   startDate: {
     type: Date,
-    required: true
+    required: true,
   },
   finishDate: {
     type: Date,
-    required: true
-  }
-}, {
-  timestamps: true
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
-export default mongoose.model('Schedule', scheduleSchema);
+export default mongoose.model("Schedule", scheduleSchema);

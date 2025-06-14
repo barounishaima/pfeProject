@@ -1,9 +1,14 @@
-const express = require('express');
+import express from 'express';
+import {
+  getResultsForTask,
+  getResultDetail,
+  getReport
+} from '../controllers/resultController.js';
+
 const router = express.Router();
-const controller = require('../controllers/resultController');
 
-router.get('/tasks/:taskId/results', controller.getResultsForTask);
-router.get('/results/:resultId', controller.getResultDetail);
-router.get('/reports/:reportId', controller.getReport);
+router.get('/tasks/:taskId/results', getResultsForTask);
+router.get('/results/:resultId', getResultDetail);
+router.get('/reports/:reportId', getReport);
 
-module.exports = router;
+export default router;

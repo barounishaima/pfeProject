@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional
 from gvm.connections import TLSConnection
@@ -8,7 +9,7 @@ from icalendar import Calendar, Event
 from datetime import datetime
 from typing import Any, Dict
 import pytz
-import os
+
 
 def element_to_dict(element: etree._Element) -> Dict[str, Any]:
     """Recursively converts an XML element into a dictionary, handling repeated tags."""
@@ -24,33 +25,40 @@ def element_to_dict(element: etree._Element) -> Dict[str, Any]:
     result.update(element.attrib)
     return result
 
-# Configuration
-GVM_HOST = "192.168.0.233"
+
+GVM_HOST = "192.168.137.61"
 GVM_PORT = 9390
 gvmUsername = "admin"
 gvmPassword = "admin"
 
 app = FastAPI()
 
+
 class TargetRequest(BaseModel):
     name: str
     hosts: list[str]
+    exclude_hosts: list[str]
+    comment: str
     port_list_id: Optional[str] = "4a4717fe-57d2-11e1-9a26-406186ea4fc5"
+
 
 class ScheduleRequest(BaseModel):
     name: str
+    comment: str
     time: str  # Format: YYYYMMDDTHHMMSSZ (UTC)
     period: Optional[str] = "FREQ=DAILY"
     timezone: Optional[str] = "UTC"
     until: Optional[str] = None  # Format: YYYYMMDDTHHMMSSZ (UTC)
 
+
 class TaskRequest(BaseModel):
     name: str
+    comment: str
     target_id: str
     config_id: Optional[str] = "daba56c8-73ec-11df-a475-002264764cea"
     schedule_id: Optional[str] = None
-    scanner_id: Optional[str] ="08b69003-5fc2-4037-a479-93b440211c73"
-    
+    scanner_id: Optional[str] = "08b69003-5fc2-4037-a479-93b440211c73"
+
 
 def connect_to_gvm():
     connection = TLSConnection(
@@ -61,22 +69,29 @@ def connect_to_gvm():
 
 # ---------------------- TARGET ----------------------
 
+
 @app.post("/targets")
 def create_target(request: TargetRequest):
     try:
         with connect_to_gvm() as gmp:
             gmp.authenticate(gvmUsername, gvmPassword)
+            print(TargetRequest)
             response = gmp.create_target(
                 name=request.name,
                 hosts=request.hosts,
-                port_list_id=request.port_list_id
+                exclude_hosts=request.exclude_hosts,
+                port_list_id=request.port_list_id,
+                comment=request.comment
             )
+            print("✅ GVM response:", response)
             root = etree.fromstring(response)
             if root is None:
                 raise HTTPException(status_code=404, detail="Target not found")
             return element_to_dict(root)
     except Exception as e:
+        print("❌ Exception:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/targets")
 def get_all_targets():
@@ -90,20 +105,22 @@ def get_all_targets():
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/targets/{target_id}")
 def get_target(target_id: str):
     try:
         with connect_to_gvm() as gmp:
             gmp.authenticate(gvmUsername, gvmPassword)
             response = gmp.get_target(target_id)
-            root = etree.fromstring(response) 
+            root = etree.fromstring(response)
             if root is None:
                 raise HTTPException(status_code=404, detail="Target not found")
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.put("/targets/{target_id}")
 def update_target(target_id: str, request: TargetRequest):
     try:
@@ -118,7 +135,8 @@ def update_target(target_id: str, request: TargetRequest):
             return {"message": f"Target {target_id} updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.delete("/targets/{target_id}")
 def delete_target(target_id: str):
     try:
@@ -130,6 +148,7 @@ def delete_target(target_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------- SCHEDULE ----------------------
+
 
 @app.post("/schedules")
 def create_schedule(request: ScheduleRequest):
@@ -169,6 +188,7 @@ def create_schedule(request: ScheduleRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/schedules")
 def get_all_schedules():
     try:
@@ -181,7 +201,8 @@ def get_all_schedules():
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/schedules/{schedule_id}")
 def get_schedule(schedule_id: str):
     try:
@@ -194,7 +215,8 @@ def get_schedule(schedule_id: str):
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.put("/schedules/{schedule_id}")
 def update_schedule(schedule_id: str, request: ScheduleRequest):
     try:
@@ -228,7 +250,8 @@ def update_schedule(schedule_id: str, request: ScheduleRequest):
             return {"message": f"Schedule {schedule_id} updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.delete("/schedules/{schedule_id}")
 def delete_schedule(schedule_id: str):
     try:
@@ -238,8 +261,9 @@ def delete_schedule(schedule_id: str):
             return {"message": f"Schedule {schedule_id} deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 # ---------------------- TASK ----------------------
+
 
 @app.post("/tasks")
 def create_task(request: TaskRequest):
@@ -249,6 +273,7 @@ def create_task(request: TaskRequest):
             response = gmp.create_task(
                 name=request.name,
                 config_id=request.config_id,
+                comment=request.comment,
                 target_id=request.target_id,
                 schedule_id=request.schedule_id,
                 scanner_id=request.scanner_id
@@ -259,6 +284,7 @@ def create_task(request: TaskRequest):
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/tasks")
 def get_all_tasks():
@@ -272,7 +298,8 @@ def get_all_tasks():
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str):
     try:
@@ -285,7 +312,8 @@ def get_task(task_id: str):
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.put("/tasks/{task_id}")
 def update_task(task_id: str, request: TaskRequest):
     try:
@@ -294,6 +322,7 @@ def update_task(task_id: str, request: TaskRequest):
             gmp.modify_task(
                 task_id=task_id,
                 name=request.name,
+                comment=request.comment,
                 config_id=request.config_id,
                 target_id=request.target_id,
                 schedule_id=request.schedule_id,
@@ -302,6 +331,7 @@ def update_task(task_id: str, request: TaskRequest):
             return {"message": f"Task {task_id} updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: str):
@@ -323,8 +353,7 @@ def start_task(task_id: str):
             return {"message": f"Task {task_id} started"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-#------------------- results ----------------------------------
+
 
 @app.get("/tasks/{task_id}/results")
 def get_results_for_task(task_id: str):
@@ -338,7 +367,8 @@ def get_results_for_task(task_id: str):
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/results/{result_id}")
 def get_result_detail(result_id: str):
     try:
@@ -351,7 +381,8 @@ def get_result_detail(result_id: str):
             return element_to_dict(root)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/reports/{report_id}")
 def get_report(report_id: str, format: Optional[str] = "xml"):
     try:
@@ -362,12 +393,17 @@ def get_report(report_id: str, format: Optional[str] = "xml"):
                 "xml": "a994b278-1f62-11e1-96ac-406186ea4fc5"
             }.get(format.lower(), "c402cc3e-b531-11e1-9163-406186ea4fc5")
 
-            response = gmp.get_report(report_id=report_id, report_format_id=report_format_id, details=True)
-            return {"report": response}
+            xml = gmp.get_report(
+                report_id=report_id,
+                report_format_id=report_format_id,
+                details=True,
+                filter_string="rows=0",
+                ignore_pagination=True
+            )
+            return Response(content=xml, media_type="application/xml")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-#----------------------- other ---------------------------------
 
 @app.get("/port-lists")
 def get_all_port_lists():
@@ -386,7 +422,8 @@ def get_all_port_lists():
             return {"port_lists": port_lists}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/scan-configs")
 def get_all_scan_configs():
     try:
@@ -404,7 +441,8 @@ def get_all_scan_configs():
             return {"scan_configs": configs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @app.get("/scanners")
 def get_all_scanners():
     try:
@@ -422,7 +460,8 @@ def get_all_scanners():
             return {"scanners": scanners}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-     
+
+
 @app.get("/debug")
 def debug_connection():
     try:

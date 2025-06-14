@@ -1,13 +1,16 @@
+//controllers/targetController.js
+
 import * as service from'../services/targetService.js';
 
 // Format a Target document into API-friendly response
 const formatTarget = (target) => ({
-  id: target.TargetId,
-  name: target.Name,
-  comment: target.Comment || '',
-  ipAddresses: target.IpAdresses || [],
-  createdAt: target.createdAt,
-  updatedAt: target.updatedAt,
+  Id: target.TargetId,
+  Name: target.Name,
+  Comment: target.Comment || '',
+  IpAddresses: target.IpAdresses || [],
+  exclude_hosts: target.exclude_hosts || [],
+  CreatedAt: target.createdAt,
+  UpdatedAt: target.updatedAt,
 });
 
 // Create Target
@@ -16,7 +19,7 @@ export const create = async (req, res) => {
     const target = await service.createTarget(req.body);
     res.json({
       success: true,
-      id: target.TargetId,
+      id: target.Id,
       message: 'Target created successfully',
     });
   } catch (err) {

@@ -1,27 +1,53 @@
-import api from '../utils/apiClient.js'; 
-import Target from '../models/Target.js';
+import api from "../utils/apiClient.js";
+import Target from "../models/Target.js";
 
 export const createTarget = async (data) => {
   try {
     // Step 1: Call external API to create the target
-    const TargetId = await api.post('/targets', data);
+    const fastApiPayload = {
+      name: data.Name,
+      hosts: data.IpAdresses,
+      exclude_hosts: data.exclude_hosts,
+      comment: data.Comment || "",
+      port_list_id: "4a4717fe-57d2-11e1-9a26-406186ea4fc5",
+    };
+    const TargetResponce = await api.post("/targets", fastApiPayload);
+    const TargetId = TargetResponce.data.id;
+    console.log("target id  :", TargetResponce);
 
+    if (!TargetId) {
+      throw new Error("FastAPI did not return a valid target ID.");
+    }
     // Step 2: Save the target to MongoDB
     const target = new Target({
       TargetId: TargetId,
       Name: data.Name,
-      Comment: data.Comment || '',
-      IpAdresses: data.IpAdresses
+      Comment: data.Comment || "",
+      IpAdresses: data.IpAdresses,
+      exclude_hosts: data.exclude_hosts,
     });
 
-    await target.save();
+    try {
+      console.log(" Target being saved to Mongo:", target);
+      await target.save();
+    } catch (mongoErr) {
+      console.error(" Error while saving target to MongoDB:", mongoErr);
+      throw new Error("Failed to save target to MongoDB: " + mongoErr.message);
+    }
 
     return target;
   } catch (error) {
-    throw new Error(`Failed to create target: ${error.message}`);
+    if (
+      error.response &&
+      error.response.data &&
+      error.response.data.status_text
+    ) {
+      throw new Error(error.response.data.status_text);
+    } else {
+      throw new Error(`Failed to create target: ${error.message}`);
+    }
   }
 };
-
 
 export const getTargets = async () => {
   try {
@@ -44,7 +70,6 @@ export const getTarget = async (id) => {
   }
 };
 
-
 export const updateTarget = async (id, data) => {
   try {
     // Step 1: Call external API to update the target
@@ -55,7 +80,7 @@ export const updateTarget = async (id, data) => {
       { TargetId: id },
       {
         Name: data.Name,
-        Comment: data.Comment || '',
+        Comment: data.Comment || "",
         IpAdresses: data.IpAdresses,
       },
       { new: true } // return updated document

@@ -1,7 +1,7 @@
-const service = require('../services/resultService');
+import * as service from '../services/resultService.js';
 
 // Get all results for a given task (scan)
-exports.getResultsForTask = async (req, res) => {
+export const getResultsForTask = async (req, res) => {
   try {
     const results = await service.getResultsForTask(req.params.taskId);
 
@@ -26,7 +26,7 @@ exports.getResultsForTask = async (req, res) => {
 };
 
 // Get detail for a single result by MongoDB _id
-exports.getResultDetail = async (req, res) => {
+export const getResultDetail = async (req, res) => {
   try {
     const result = await service.getResultDetail(req.params.resultId);
 
@@ -53,7 +53,7 @@ exports.getResultDetail = async (req, res) => {
 };
 
 // Proxy getReport to external API (no change needed)
-exports.getReport = async (req, res) => {
+export const getReport = async (req, res) => {
   try {
     const { format } = req.query;
     const result = await service.getReport(req.params.reportId, format);

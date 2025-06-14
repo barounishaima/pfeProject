@@ -24,6 +24,9 @@ const targetSchema = new mongoose.Schema(
         "At least one IP address is required",
       ],
     },
+    exclude_hosts: {
+      type: [String],
+    },
   },
   {
     timestamps: true,

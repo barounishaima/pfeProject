@@ -47,7 +47,18 @@ export default class AuthService {
       phonenumber: userData.phonenumber,
       password: hash,
     };
+
     await this.userCollection.insertOne(user);
+
+    const theHiveUserData = {
+      login: userData.username,
+      name: userData.username,
+      password: userData.password, 
+      roles: ['read'] 
+    };
+  
+    await createNewUser(theHiveUserData);
+
     return user;
   }
 
